@@ -14,7 +14,7 @@ void task_printmsg(void* arg){
 }
 
 void task_addone(void* arg){
-	atomic_int* count = (atomic_int*)arg;
+    atomic_int* count = (atomic_int*)arg;
 	(*count)++;
 }
 
@@ -23,11 +23,11 @@ int main(int argc, char *argv[]) {
 	char *messages[] = {"Hello, world", "Ey, world", "Yo, world!", "Bye, world!", NULL};
 	threadpool_init(&pool);
 	for(int i = 0; messages[i] != NULL; i++){
-		while(threadpool_add_task(&pool, task_printmsg, messages[i]) == 1);		// Queue could overflow and return 1
+		threadpool_add_task(&pool, task_printmsg, messages[i]);
 	}
 	atomic_int count = 0;
 	for(int i = 0; i < COUNT_TARGET; i++){
-		while(threadpool_add_task(&pool, task_addone, &count) == 1);	
+		threadpool_add_task(&pool, task_addone, &count);
 	}
 	threadpool_destroy(&pool);
 	if(count == COUNT_TARGET){
