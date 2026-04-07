@@ -2,6 +2,7 @@
 #define THREADPOOL_H
 
 #include <pthread.h>
+#include <stdatomic.h>
 
 #define THREADS 16
 #define QUEUE_SIZE 100
@@ -27,8 +28,7 @@ typedef struct {
 // Function declarations
 void threadpool_init(threadpool_t* pool);
 void threadpool_destroy(threadpool_t* pool);
-void threadpool_add_task(threadpool_t* pool, void (*function)(void*), void* arg);
-void example_task(void* arg);
+int threadpool_add_task(threadpool_t* pool, void (*function)(void*), void* arg);
 void* thread_function(void* arg);
 
 #endif

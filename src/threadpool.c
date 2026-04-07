@@ -1,6 +1,5 @@
 #include "../inc/threadpool.h"
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
 void threadpool_init(threadpool_t* pool){
@@ -27,30 +26,26 @@ void threadpool_destroy(threadpool_t* pool){
 	pthread_cond_destroy(&pool->notify);
 }
 
-void threadpool_add_task(threadpool_t* pool, void (*function)(void*), void* arg){
+int threadpool_add_task(threadpool_t* pool, void (*function)(void*), void* arg){
 	pthread_mutex_lock(&pool->lock);
 	pool->queued++;
 	if(pool->queued >= QUEUE_SIZE){
-		fprintf(stderr, "ERROR: QUEUE LIMIT REACHED\n");
+		// Queue limit reached
 		pool->queued--;
-		return;
+		return 1;
 	}
 	pool->task_queue[pool->queue_back].fn = function;
 	pool->task_queue[pool->queue_back].arg = arg;
 	pool->queue_back = (pool->queue_back+1) % QUEUE_SIZE;
 	pthread_cond_signal(&pool->notify);
 	pthread_mutex_unlock(&pool->lock);
-}
-
-void example_task(void* arg){
-	char *str = (char*)arg;
-	printf("ARG: %s\n", str);
+	return 0;
 }
 
 void* thread_function(void* arg){
 	threadpool_t* pool = (threadpool_t*)arg;
-	pthread_mutex_lock(&pool->lock);
 	while(true){
+		pthread_mutex_lock(&pool->lock);
 		while(pool->queued == 0 && !pool->stop){
 			pthread_cond_wait(&pool->notify, &pool->lock);
 		}
@@ -58,9 +53,12 @@ void* thread_function(void* arg){
 			pthread_mutex_unlock(&pool->lock);
 			break;
 		}
-		(pool->task_queue[pool->queue_front].fn)(pool->task_queue[pool->queue_front].arg);
+		void (*task_func)(void*) = pool->task_queue[pool->queue_front].fn;
+		void* task_arg = (pool->task_queue[pool->queue_front].arg);
 		pool->queue_front = (pool->queue_front+1) % QUEUE_SIZE;
 		pool->queued--;
+		pthread_mutex_unlock(&pool->lock);		// Unlock mutex before running task
+		task_func(task_arg);
 	}
 	return NULL;
 }
